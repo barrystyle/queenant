@@ -37,7 +37,7 @@ ________
 `   |   /`-. \ '-.
     |   |   | \\
    /    |   /  `-.
- -'     \__/{2}
+ -'     \__/{2}         and bring baz a beer
 """.format(RED, BOLD, END)
 
 
@@ -61,9 +61,9 @@ class CgminerAPI(object):
         receive the response (and decode it).
         """
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
+        sock.settimeout(5)
+        log.debug("connecting to %s:%d", self.host, self.port)
         try:
-            log.debug("connecting to %s:%d", self.host, self.port)
             sock.connect((self.host, self.port))
         except socket.error, e:
             log.error("unable to connect to %s:%d", self.host, self.port)
@@ -100,32 +100,38 @@ class CgminerAPI(object):
         return out
 
 if __name__ == "__main__":
-    print __doc__
 
     parser = argparse.ArgumentParser(prog="queenant", description="change cgminer pools to your own",
                     epilog="""./queen.py 10.1.1.2 --port 4028 \\
                             "stratum+tcp://us.clevermining.com:3333" <yourBTCwallet> 123""")
 
-    parser.add_argument("host", help="target IP machaine")
+    parser.add_argument("host", help="target IP")
     parser.add_argument("pool", help="new pool host")
     parser.add_argument("pool_user", help="username for new pool")
     parser.add_argument("pool_pass", help="pass for new pool")
 
     parser.add_argument("--port", type=int, default=4028, help="target port for cgminer rpc")
+    parser.add_argument("--batch", type=bool, default=False, help="disable logo on batch run")
     # parser.add_argument("--conf", type=str, default="/config/cgminer.conf", help="remote config file (default: /config/cgminer.conf)")
 
     args = parser.parse_args()
+
+    if(args.batch==False):
+         print __doc__
 
     log.info("connecting to: %s:%d", args.host, args.port)
 
     cg = CgminerAPI(args.host, args.port)
 
     # general info
-    summary = cg.command('summary')
+    try:
+        summary = cg.command('summary')
+    except:
+        log.info("Fail")
+        sys.exit(1)
 
     log.info("Version: %s", summary['STATUS'][0]['Description'])
     log.info("Average GH/s: %s", summary['SUMMARY'][0]['GHS av'])
-
 
     # pool info
     pools = cg.command('pools')['POOLS']
